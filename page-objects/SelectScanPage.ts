@@ -3,15 +3,6 @@ import { acceptCookies } from '../utils/cookie-handler';
 import { handleTimezonePopup } from '../utils/timezone-handler';
 import { DashboardPage } from './DashboardPage';
 
-/**
- * Page Object Model for Select Your Scan Page
- *
- * Updated Flow:
- * - User lands here after clicking "Book a Scan"
- * - Selects one scan type
- * - (Optionally) views “What’s Included”
- * - Clicks Continue to move to scheduling/birth info page
- */
 export class SelectScanPage {
   readonly page: Page;
   readonly mriScanCard: Locator;
@@ -20,41 +11,28 @@ export class SelectScanPage {
   readonly heartLungsCTScanCard: Locator;
   readonly continueButton: Locator;
   readonly cancelButton: Locator;
-  readonly whatsIncludedLink: Locator;
   readonly whatsIncludedPopup: Locator;
   readonly popupCloseButton: Locator;
 
   constructor(page: Page) {
     this.page = page;
 
-    // Scan plan cards - find the clickable card element
-    // The cards are in listitems, find the clickable parent element
-    // Find text, then find the clickable parent (go up DOM tree to find clickable element)
-    // The clickable card is typically 2-3 levels up from the text
     this.mriScanCard = page.getByText('MRI Scan', { exact: true }).locator('..').locator('..').first();
     this.mriScanWithSpineCard = page.getByText('MRI Scan with Spine', { exact: true }).locator('..').locator('..').first();
     this.mriScanWithSkeletalCard = page.getByText('MRI Scan with Skeletal and Neurological Assessment', { exact: true }).locator('..').locator('..').first();
     this.heartLungsCTScanCard = page.getByText('Heart & Lungs CT Scan', { exact: true }).locator('..').locator('..').first();
 
-    // Buttons
     this.continueButton = page.locator('[data-test="submit"]').first();
     this.cancelButton = page.locator('button:has-text("Cancel")').first();
-
-    // Pop-up elements
-    this.whatsIncludedLink = page.locator('text="What\'s Included"').first();
     this.whatsIncludedPopup = page.locator('.modal, .popup, [role="dialog"]').first();
     this.popupCloseButton = page.locator('button:has-text("×"), button[aria-label="Close"]').first();
   }
 
-  /**
-   * Navigate to the Select Scan page
-   */
   async goto() {
     const currentUrl = this.page.url();
     if (currentUrl.includes('/select-scan') || currentUrl.includes('/select-plan')) {
       await this.page.waitForLoadState('domcontentloaded');
       await acceptCookies(this.page).catch(() => {});
-      // Wait for page heading to be visible (more reliable and unique)
       await this.page.getByRole('heading', { name: 'Review your Scan.' }).waitFor({ state: 'visible', timeout: 15000 });
       return;
     }
@@ -65,15 +43,9 @@ export class SelectScanPage {
     if (isOnDashboard) {
       console.log('On dashboard, clicking "Book a scan"...');
       await dashboardPage.clickBookScan();
-      
-      // Wait for navigation to complete
       await this.page.waitForLoadState('domcontentloaded');
-      await this.page.waitForTimeout(1000); // Give time for page to render
-      
-      // Accept cookies quickly (won't block if no pop-up exists)
+      await this.page.waitForTimeout(1000);
       await acceptCookies(this.page).catch(() => {});
-      
-      // Wait for page heading to be visible (more reliable and unique)
       await this.page.getByRole('heading', { name: 'Review your Scan.' }).waitFor({ state: 'visible', timeout: 15000 });
       return;
     }
@@ -82,87 +54,89 @@ export class SelectScanPage {
     await this.page.goto('/select-scan');
     await this.page.waitForLoadState('domcontentloaded');
     await acceptCookies(this.page).catch(() => {});
-    // Wait for page heading to be visible (more reliable and unique)
     await this.page.getByRole('heading', { name: 'Review your Scan.' }).waitFor({ state: 'visible', timeout: 15000 });
   }
 
-  /**
-   * Select a scan plan
-   */
   async selectScanPlan(scanType: 'mri' | 'mri-spine' | 'mri-skeletal' | 'heart-lungs') {
-    let cardName: string;
-    let textToFind: string;
-
-    switch (scanType) {
-      case 'mri':
-        cardName = 'MRI Scan';
-        textToFind = 'MRI Scan';
-        break;
-      case 'mri-spine':
-        cardName = 'MRI Scan with Spine';
-        textToFind = 'MRI Scan with Spine';
-        break;
-      case 'mri-skeletal':
-        cardName = 'MRI Scan with Skeletal and Neurological Assessment';
-        textToFind = 'MRI Scan with Skeletal and Neurological Assessment';
-        break;
-      case 'heart-lungs':
-        cardName = 'Heart & Lungs CT Scan';
-        textToFind = 'Heart & Lungs CT Scan';
-        break;
-    }
-
-    console.log(`Selecting scan plan: ${cardName}`);
-    
-    // Find the text element first
-    const textElement = this.page.getByText(textToFind, { exact: true }).first();
-    await textElement.waitFor({ state: 'visible', timeout: 15000 });
-    
-    // Find the clickable parent - go up to find the clickable card element
-    // Try going up 2-3 levels to find the clickable parent
-    let card = textElement.locator('..').locator('..').first();
-    
-    // Wait for the card to be visible and clickable
-    await card.waitFor({ state: 'visible', timeout: 10000 });
-    await card.scrollIntoViewIfNeeded();
-    
-    // Click the card
-    await card.click({ timeout: 5000 });
-    console.log(`✓ ${cardName} selected`);
-  }
-
-  /**
-   * Click Continue to proceed to next step
-   */
-  async clickContinue() {
-    await this.continueButton.waitFor({ state: 'visible', timeout: 10000 });
-    
-    // Click and wait for navigation to schedule page or next step
-    await Promise.all([
-      this.page.waitForURL(/schedule|schedule-scan|select.*scan|dashboard/i, { timeout: 15000 }).catch(() => {}),
-      this.continueButton.click()
-    ]);
-    
-    // Wait for page to be ready
-    await this.page.waitForLoadState('domcontentloaded');
-    await this.page.waitForTimeout(1000); // Give time for page to render
-  }
-
-  /**
-   * (Optional) Open and close “What’s Included”
-   */
-  async openAndCloseWhatsIncluded(scanType: 'mri' | 'mri-spine' | 'mri-skeletal' | 'heart-lungs') {
     let card: Locator;
+
     switch (scanType) {
       case 'mri': card = this.mriScanCard; break;
       case 'mri-spine': card = this.mriScanWithSpineCard; break;
       case 'mri-skeletal': card = this.mriScanWithSkeletalCard; break;
       case 'heart-lungs': card = this.heartLungsCTScanCard; break;
     }
-    const link = card.locator('text="What\'s Included"').first();
-    await link.click();
-    await this.whatsIncludedPopup.waitFor({ state: 'visible', timeout: 5000 });
-    await this.popupCloseButton.click();
-    await this.whatsIncludedPopup.waitFor({ state: 'hidden', timeout: 5000 });
+
+    console.log(`Selecting scan plan: ${scanType}`);
+    await card.waitFor({ state: 'visible', timeout: 15000 });
+    await card.scrollIntoViewIfNeeded();
+    await card.click({ timeout: 5000 });
+    console.log(`✓ ${scanType} selected`);
+  }
+
+  async completeIntakeIfPresent({
+    dateOfBirth = '01-01-1990',
+    sexAtBirth = 'Female',
+  }: {
+    dateOfBirth?: string;
+    sexAtBirth?: string;
+  } = {}) {
+    const dobField = this.page.getByRole('textbox', { name: /date of birth/i }).first();
+    const dobVisible = await dobField.isVisible({ timeout: 2000 }).catch(() => false);
+    if (dobVisible) {
+      console.log('Filling Date of Birth prerequisite...');
+      await dobField.fill(dateOfBirth);
+      await dobField.blur();
+    }
+
+    let sexDropdown = this.page.getByRole('combobox', { name: /sex at birth/i }).first();
+    let sexVisible = await sexDropdown.isVisible({ timeout: 2000 }).catch(() => false);
+
+    if (!sexVisible) {
+      sexDropdown = this.page.getByRole('combobox').filter({ hasText: /Select/i }).first();
+      sexVisible = await sexDropdown.isVisible({ timeout: 2000 }).catch(() => false);
+    }
+
+    if (!sexVisible) {
+      const label = this.page.getByText(/What was your sex at birth\?/i).first();
+      const candidate = label.locator('xpath=following-sibling::*').locator('[role="combobox"], select, button').first();
+      const candidateVisible = await candidate.isVisible({ timeout: 2000 }).catch(() => false);
+      if (candidateVisible) {
+        sexDropdown = candidate;
+        sexVisible = true;
+      }
+    }
+
+    if (sexVisible) {
+      console.log('Selecting Sex at Birth prerequisite...');
+      await sexDropdown.click();
+      await this.page.waitForTimeout(200);
+
+      const desiredOption = this.page.getByRole('option', { name: new RegExp(sexAtBirth, 'i') }).first();
+      const optionVisible = await desiredOption.isVisible({ timeout: 2000 }).catch(() => false);
+      if (optionVisible) {
+        await desiredOption.click();
+      } else {
+        const fallbackOptions = this.page.getByRole('option');
+        const optionCount = await fallbackOptions.count();
+        if (optionCount > 0) {
+          await fallbackOptions.first().click();
+        }
+      }
+    }
+  }
+
+  async clickContinue() {
+    await this.continueButton.waitFor({ state: 'visible', timeout: 10000 });
+
+    console.log('Clicking Continue to move to Schedule Scan page...');
+    await Promise.all([
+      this.page.waitForLoadState('domcontentloaded'),
+      this.continueButton.click()
+    ]);
+
+    await this.page.waitForURL(/schedule|schedule-scan/i, { timeout: 15000 }).catch(() => {});
+    await this.page.getByRole('heading', { name: /Schedule your scan/i }).waitFor({ timeout: 10000 });
+    console.log('✓ Schedule Scan page loaded successfully');
   }
 }
