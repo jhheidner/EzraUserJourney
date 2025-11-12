@@ -1,0 +1,38 @@
+{
+  "name": "ezra-test-suite",
+  "version": "1.0.0",
+  "description": "Test suite for Ezra login, booking, and payment flow",
+  "main": "index.js",
+  "scripts": {
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "test:debug": "playwright test --debug",
+    "test:ui": "playwright test --ui",
+    "test:report": "playwright show-report",
+    "test:register": "playwright test tests/register-login.spec.ts --headed",
+    "test:register:headless": "playwright test tests/register-login.spec.ts",
+    "test:register:debug": "playwright test tests/register-login.spec.ts --debug",
+    "test:schedule": "playwright test tests/schedule-scan-payment.spec.ts --headed",
+    "test:schedule:headless": "playwright test tests/schedule-scan-payment.spec.ts",
+    "test:schedule:debug": "playwright test tests/schedule-scan-payment.spec.ts --debug",
+    "test:questionnaire": "playwright test tests/questionnaire.spec.ts --headed",
+    "test:questionnaire:headless": "playwright test tests/questionnaire.spec.ts",
+    "test:all": "playwright test tests/register-login.spec.ts tests/schedule-scan-payment.spec.ts tests/questionnaire.spec.ts --headed",
+    "test:all:headless": "playwright test tests/register-login.spec.ts tests/schedule-scan-payment.spec.ts tests/questionnaire.spec.ts"
+  },
+  "keywords": [
+    "playwright",
+    "testing",
+    "e2e",
+    "ezra"
+  ],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@playwright/test": "^1.40.0",
+    "@types/node": "^20.10.0",
+    "dotenv": "^16.3.1",
+    "typescript": "^5.3.3"
+  }
+}
+
